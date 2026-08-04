@@ -1,1 +1,99 @@
 
+name: بناء ملف APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: تثبيت الحزم
+        run: npm install --legacy-peer-deps
+
+      - name: بناء الويب
+        run: npm run build || mkdir -p dist
+
+      - name: تجهيز مجلد الويب لـ Capacitor
+        run: |
+          mkdir -p dist
+          if [ ! -f dist/index.html ]; then
+            cp public/app-shell.html dist/index.html
+          fi
+
+      - name: إضافة منصة أندرويد
+        run: npx cap add android || true
+
+      - name: مزامنة Capacitor
+        run: npx cap sync android
+
+      - name: تجهيز مفتاح التوقيع
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/wasl-release.keystore
+            echo "store_password=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
+            echo "key_alias=$KEY_ALIAS" >> "$GITHUB_OUTPUT"
+            echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          else
+            keytool -genkeypair -v -keystore android/app/wasl-release.keystore \
+              -alias wasl -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass waslapp2026 -keypass waslapp2026 \
+              -dname "CN=Wasl, OU=Wasl, O=Wasl, L=Cairo, S=Cairo, C=EG"
+            echo "store_password=waslapp2026" >> "$GITHUB_OUTPUT"
+            echo "key_alias=wasl" >> "$GITHUB_OUTPUT"
+            echo "key_password=waslapp2026" >> "$GITHUB_OUTPUT"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::تم إنشاء مفتاح توقيع مؤقت. حمّله من Artifacts (wasl-keystore) واحفظه."
+          fi
+
+      - name: بناء APK + AAB
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+          ./gradlew assembleRelease bundleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/app/wasl-release.keystore \
+            -Pandroid.injected.signing.store.password='${{ steps.keystore.outputs.store_password }}' \
+            -Pandroid.injected.signing.key.alias='${{ steps.keystore.outputs.key_alias }}' \
+            -Pandroid.injected.signing.key.password='${{ steps.keystore.outputs.key_password }}'
+
+      - name: رفع ملفات APK و AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasl-apk
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+      - name: رفع مفتاح التوقيع المؤقت
+        if: ${{ steps.keystore.outputs.generated == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasl-keystore
+          path: android/app/wasl-release.keystore
+          if-no-files-found: error
+          
