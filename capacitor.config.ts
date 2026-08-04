@@ -5,7 +5,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * التطبيق يعمل بتقنية SSR، لذلك يُحمّل الموقع المنشور داخل التطبيق الأصلي.
  */
 const config: CapacitorConfig = {
-  appId: "app.lovable.arabsparkai",
+  appId: "com.wasl.receipt",
   appName: "وَصْل",
   webDir: "dist",
   server: {
