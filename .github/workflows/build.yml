@@ -1,5 +1,4 @@
-
-name: بناء ملف APK
+name: build-apk
 
 on:
   push:
@@ -23,26 +22,26 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: تثبيت الحزم
+      - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: بناء الويب
+      - name: Build web
         run: npm run build || mkdir -p dist
 
-      - name: تجهيز مجلد الويب لـ Capacitor
+      - name: Prepare web dist
         run: |
           mkdir -p dist
           if [ ! -f dist/index.html ]; then
-            cp public/app-shell.html dist/index.html
+            cp public/app-shell.html dist/index.html || true
           fi
 
-      - name: إضافة منصة أندرويد
+      - name: Add Android platform
         run: npx cap add android || true
 
-      - name: مزامنة Capacitor
+      - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: تجهيز مفتاح التوقيع
+      - name: Setup Keystore
         id: keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -65,10 +64,9 @@ jobs:
             echo "key_alias=wasl" >> "$GITHUB_OUTPUT"
             echo "key_password=waslapp2026" >> "$GITHUB_OUTPUT"
             echo "generated=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::تم إنشاء مفتاح توقيع مؤقت. حمّله من Artifacts (wasl-keystore) واحفظه."
           fi
 
-      - name: بناء APK + AAB
+      - name: Build APK and AAB
         working-directory: android
         run: |
           chmod +x ./gradlew
@@ -79,7 +77,7 @@ jobs:
             -Pandroid.injected.signing.key.alias='${{ steps.keystore.outputs.key_alias }}' \
             -Pandroid.injected.signing.key.password='${{ steps.keystore.outputs.key_password }}'
 
-      - name: رفع ملفات APK و AAB
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wasl-apk
@@ -87,13 +85,5 @@ jobs:
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
-
-      - name: رفع مفتاح التوقيع المؤقت
-        if: ${{ steps.keystore.outputs.generated == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: wasl-keystore
-          path: android/app/wasl-release.keystore
           if-no-files-found: error
           
