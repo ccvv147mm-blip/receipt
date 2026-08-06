@@ -89,5 +89,16 @@ jobs:
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
-          
+          if-no-files-found: error 
+      - name: Export PEM Certificate
+        run: |
+         keytool -export -rfc -alias wasl -file upload_certificate.pem -keystore android/app/release.keystore -storepass waslapp2026 || true
+  
+      - name: Upload PEM Certificate
+        uses: actions/upload-artifact@v4
+        with:
+         name: upload_certificate
+         path: upload_certificate.pem
+
+
+
