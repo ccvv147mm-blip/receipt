@@ -65,6 +65,7 @@ jobs:
             echo "key_password=waslapp2026" >> "$GITHUB_OUTPUT"
             echo "generated=true" >> "$GITHUB_OUTPUT"
           fi
+                  keytool -list -v -keystore android/app/wasl-release.keystore -alias wasl -storepass waslapp2026 -keypass waslapp2026
 
       - name: Build APK and AAB
         working-directory: android
@@ -76,9 +77,9 @@ jobs:
             -Pandroid.injected.signing.store.password='${{ steps.keystore.outputs.store_password }}' \
             -Pandroid.injected.signing.key.alias='${{ steps.keystore.outputs.key_alias }}' \
             -Pandroid.injected.signing.key.password='${{ steps.keystore.outputs.key_password }}'
-      - name: Print SHA256 Fingerprint
-        working-directory: android
-        run: keytool -list -v -keystore app/wasl-release.keystore -alias wasl -storepass waslapp2026 -keypass waslapp2026
+
+      
+        
         
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
