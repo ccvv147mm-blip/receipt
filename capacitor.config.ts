@@ -14,6 +14,8 @@ const config: CapacitorConfig = {
     androidScheme: "https",
   },
   android: {
+  versionCode: 2,
+  versionName: "1.1",   
     allowMixedContent: false,
   },
   ios: {
