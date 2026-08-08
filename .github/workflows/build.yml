@@ -80,16 +80,15 @@ jobs:
 
       
         
-        
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
+              - name: Upload Artifacts
+          uses: actions/upload-artifact@v4
+          with:
           name: wasl-release-bundle
           path: |
-            android/app/build/outputs/apk/debug/*.apk
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error 
+          android/app/build/outputs/bundle/release/*.aab
+          android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+        
       - name: Export PEM Certificate
         run: |
          keytool -export -rfc -alias wasl -file upload_certificate.pem -keystore android/app/release.keystore -storepass waslapp2026 || true
