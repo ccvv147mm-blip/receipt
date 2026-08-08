@@ -20,8 +20,6 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -51,21 +49,21 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > android/app/wasl-release.keystore
-            echo "store_password=$KEYSTORE_PASSWORD" >> "$GITHUB_OUTPUT"
-            echo "key_alias=$KEY_ALIAS" >> "$GITHUB_OUTPUT"
-            echo "key_password=$KEY_PASSWORD" >> "$GITHUB_OUTPUT"
-            echo "generated=false" >> "$GITHUB_OUTPUT"
+            echo "store_password=$KEYSTORE_PASSWORD" >> $GITHUB_OUTPUT
+            echo "key_alias=$KEY_ALIAS" >> $GITHUB_OUTPUT
+            echo "key_password=$KEY_PASSWORD" >> $GITHUB_OUTPUT
+            echo "generated=false" >> $GITHUB_OUTPUT
           else
             keytool -genkeypair -v -keystore android/app/wasl-release.keystore \
               -alias wasl -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass waslapp2026 -keypass waslapp2026 \
+              -storepass wasapp2026 -keypass wasapp2026 \
               -dname "CN=Wasl, OU=Wasl, O=Wasl, L=Cairo, S=Cairo, C=EG"
-            echo "store_password=waslapp2026" >> "$GITHUB_OUTPUT"
-            echo "key_alias=wasl" >> "$GITHUB_OUTPUT"
-            echo "key_password=waslapp2026" >> "$GITHUB_OUTPUT"
-            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "store_password=wasapp2026" >> $GITHUB_OUTPUT
+            echo "key_alias=wasl" >> $GITHUB_OUTPUT
+            echo "key_password=wasapp2026" >> $GITHUB_OUTPUT
+            echo "generated=true" >> $GITHUB_OUTPUT
           fi
-                  keytool -list -v -keystore android/app/wasl-release.keystore -alias wasl -storepass waslapp2026 -keypass waslapp2026
+          keytool -list -v -keystore android/app/wasl-release.keystore -alias wasl -storepass wasapp2026
 
       - name: Build APK and AAB
         working-directory: android
@@ -78,24 +76,22 @@ jobs:
             -Pandroid.injected.signing.key.alias='${{ steps.keystore.outputs.key_alias }}' \
             -Pandroid.injected.signing.key.password='${{ steps.keystore.outputs.key_password }}'
 
-              - name: Upload Artifacts
-          uses: actions/upload-artifact@v4
-          with:
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
           name: wasl-release-bundle
           path: |
-          android/app/build/outputs/bundle/release/*.aab
-          android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
-        
+
       - name: Export PEM Certificate
         run: |
-         keytool -export -rfc -alias wasl -file upload_certificate.pem -keystore android/app/release.keystore -storepass waslapp2026 || true
-  
+          keytool -export -rfc -alias wasl -file upload_certificate.pem -keystore android/app/wasl-release.keystore -storepass wasapp2026
+
       - name: Upload PEM Certificate
         uses: actions/upload-artifact@v4
         with:
-         name: upload_certificate
-         path: upload_certificate.pem
-
-
-
+          name: upload_certificate
+          path: upload_certificate.pem
+          
